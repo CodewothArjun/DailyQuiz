@@ -1,6 +1,10 @@
-name: Test Bible Quiz
+name: Daily Bible Quiz
 
 on:
+  schedule:
+    - cron: "0 19 * * *"
+      timezone: "Asia/Kathmandu"
+
   workflow_dispatch:
 
 permissions:
