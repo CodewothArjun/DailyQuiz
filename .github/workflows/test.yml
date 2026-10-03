@@ -3,6 +3,9 @@ name: Test Bible Quiz
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   send-quiz:
     runs-on: ubuntu-latest
@@ -19,16 +22,20 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Check questions file
+      - name: Send Bible Quiz
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python quiz.py
+
+      - name: Save progress
         run: |
-          echo "===== Current directory ====="
-          pwd
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          echo "===== Files ====="
-          ls -la
-
-          echo "===== questions.py ====="
-          cat questions.py
-
-          echo "===== Testing Python import ====="
-          python -c "import questions; print('Loaded from:', questions.__file__); print('Has QUESTIONS:', hasattr(questions, 'QUESTIONS')); print('Number of questions:', len(questions.QUESTIONS))"
+          if git diff --quiet progress.json; then
+            echo "No progress changes to commit."
+          else
+            git add progress.json
+            git commit -m "Update daily quiz progress"
+            git push
+          fi
