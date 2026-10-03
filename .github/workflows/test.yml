@@ -19,7 +19,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Send Bible Quiz
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python quiz.py
+      - name: Check questions file
+        run: |
+          echo "===== Current directory ====="
+          pwd
+
+          echo "===== Files ====="
+          ls -la
+
+          echo "===== questions.py ====="
+          cat questions.py
+
+          echo "===== Testing Python import ====="
+          python -c "import questions; print('Loaded from:', questions.__file__); print('Has QUESTIONS:', hasattr(questions, 'QUESTIONS')); print('Number of questions:', len(questions.QUESTIONS))"
