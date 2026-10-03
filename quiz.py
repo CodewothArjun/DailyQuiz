@@ -70,11 +70,12 @@ def send_to_discord(question_number, question):
 
     message = (
         "📖 **दैनिक बाइबल क्विज**\n\n"
-        f"📝 **प्रश्न #{question_number}**\n\n"
-        f"❓ {question}\n\n"
         "💭 पहिले आफैं सोच्नुहोस्!\n\n"
         "🙏 परमेश्वरको वचन सिकौं — "
         "एक प्रश्न प्रतिदिन।"
+
+        f"📝 **प्रश्न #{question_number}**\n\n"
+        f"## ❓ {question}\n\n"
     )
 
     response = requests.post(
