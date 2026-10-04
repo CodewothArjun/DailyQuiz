@@ -2,44 +2,51 @@ name: Daily Bible Quiz
 
 on:
   schedule:
-    - cron: "0 19 * * *"
-      timezone: "Asia/Kathmandu"
-
+    - cron: "15 13 * * *"   # 7:00 PM Nepal
+    - cron: "45 13 * * *"   # 7:30 PM backup
+    - cron: "15 14 * * *"   # 8:00 PM backup
+    - cron: "15 16 * * *"   # 10:00 PM backup
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test only (do not send, do not advance numbering)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
+concurrency:
+  group: daily-quiz
+  cancel-in-progress: false
+
 jobs:
   send-quiz:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
       - name: Send Bible Quiz
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: python quiz.py
 
       - name: Save progress
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if git diff --quiet progress.json; then
-            echo "No progress changes to commit."
-          else
+          if [ -n "$(git status --porcelain progress.json)" ]; then
             git add progress.json
             git commit -m "Update daily quiz progress"
+            git pull --rebase
             git push
+          else
+            echo "No progress changes."
           fi
