@@ -43,8 +43,8 @@ def build_message(number, question):
         "📖 **दैनिक बाइबल क्विज**\n"
         "💭 पहिले आफैं सोच्नुहोस्!\n"
         "🙏 परमेश्वरको वचन सिकौं — एक प्रश्न प्रतिदिन।\n\n"
-         f"## 📝 **प्रश्न #{number}**\n"
-        f"❓ {question}\n\n"
+         f"📝 **प्रश्न #{number}**\n"
+        f"## ❓ {question}\n\n"
     )
 
 
