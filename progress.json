@@ -1,5 +1,6 @@
 {
-    "next_question": 1,
-    "question_number": 2,
-    "sent_prefix_hash": "9481ffbcf86fbc839b7ffa507569f147dd9f0d06b26ed3383510b53a929e0d23"
+    "next_number": 1,
+    "list_pos": 0,
+    "first_hash": "",
+    "last_sent_date": ""
 }
