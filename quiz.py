@@ -1,107 +1,109 @@
 import os
+import sys
 import json
 import hashlib
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import requests
 
 from questions import QUESTIONS
 
-
 PROGRESS_FILE = "progress.json"
+NEPAL = ZoneInfo("Asia/Kathmandu")
+SEND_HOUR = 19  # 7 PM Nepal time
 
 
-def make_hash(questions):
-    text = json.dumps(
-        questions,
-        ensure_ascii=False,
-        separators=(",", ":")
-    )
+def fingerprint(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def load_progress():
-    with open(PROGRESS_FILE, "r", encoding="utf-8") as file:
-        data = json.load(file)
-
-    question_index = data.get("next_question", 0)
-
-    # Your current file only has next_question.
-    # Since Question #2 was just sent, this becomes #3.
-    question_number = data.get(
-        "question_number",
-        question_index + 1
-    )
-
-    saved_hash = data.get("sent_prefix_hash")
-
-    # Detect if the question list was replaced.
-    if saved_hash is not None and question_index <= len(QUESTIONS):
-        current_hash = make_hash(QUESTIONS[:question_index])
-
-        if saved_hash != current_hash:
-            print("🔄 New question list detected.")
-            question_index = 0
-
-    # If the new list is shorter than the old one,
-    # start from the beginning but keep the permanent number.
-    if question_index >= len(QUESTIONS):
-        question_index = 0
-
-    return question_index, question_number
-
-
-def save_progress(question_index, question_number):
-    data = {
-        "next_question": question_index,
-        "question_number": question_number,
-        "sent_prefix_hash": make_hash(QUESTIONS[:question_index])
+    progress = {
+        "next_number": 1,      # permanent serial number
+        "list_pos": 0,         # position inside the current QUESTIONS list
+        "first_hash": "",      # identifies which list we are on
+        "last_sent_date": "",  # Nepal date of the last successful post
     }
-
-    with open(PROGRESS_FILE, "w", encoding="utf-8") as file:
-        json.dump(
-            data,
-            file,
-            ensure_ascii=False,
-            indent=4
-        )
+    try:
+        with open(PROGRESS_FILE, "r", encoding="utf-8") as f:
+            progress.update(json.load(f))
+    except FileNotFoundError:
+        pass
+    return progress
 
 
-def send_to_discord(question_number, question):
-    webhook_url = os.environ["DISCORD_WEBHOOK_URL"]
+def save_progress(progress):
+    with open(PROGRESS_FILE, "w", encoding="utf-8") as f:
+        json.dump(progress, f, ensure_ascii=False, indent=4)
 
-    message = (
+
+def build_message(number, question):
+    return (
         "📖 **दैनिक बाइबल क्विज**\n"
         "💭 पहिले आफैं सोच्नुहोस्!\n"
-        "🙏 परमेश्वरको वचन सिकौं — "
-        "एक प्रश्न प्रतिदिन।\n\n"
-        f"📝 **प्रश्न #{question_number}**\n"
-        f"## ❓ {question}\n\n"
+        "🙏 परमेश्वरको वचन सिकौं — एक प्रश्न प्रतिदिन।\n\n"
+         f"## 📝 **प्रश्न #{number}**\n"
+        f"❓ {question}\n\n"
     )
 
-    response = requests.post(
-        webhook_url,
-        json={"content": message},
-        timeout=30
-    )
 
+def send_to_discord(message):
+    url = os.environ["DISCORD_WEBHOOK_URL"]
+    response = requests.post(url, json={"content": message}, timeout=30)
     response.raise_for_status()
 
 
 def main():
-    question_index, question_number = load_progress()
+    event = os.environ.get("GITHUB_EVENT_NAME", "")
+    dry_run = os.environ.get("DRY_RUN", "").lower() == "true"
+    now = datetime.now(NEPAL)
+    today = now.date().isoformat()
 
-    question = QUESTIONS[question_index]
+    progress = load_progress()
 
-    print(f"Sending question #{question_number}")
-    print(question)
+    # Scheduled runs: only after 7 PM Nepal time, and only once per day.
+    if event == "schedule":
+        if now.hour < SEND_HOUR:
+            print("Before 7 PM Nepal time. Skipping.")
+            return
+        if progress["last_sent_date"] == today:
+            print("Already sent today. Skipping.")
+            return
 
-    send_to_discord(question_number, question)
+    if not QUESTIONS:
+        print("ERROR: QUESTIONS is empty.")
+        sys.exit(1)
 
-    save_progress(
-        question_index + 1,
-        question_number + 1
-    )
+    # Detect a replaced list: its first question differs from the saved one.
+    # Appending or fixing typos in later questions does NOT trigger this.
+    current_first = fingerprint(QUESTIONS[0])
+    if progress["first_hash"] and progress["first_hash"] != current_first:
+        print("New question list detected. Starting from the top, keeping the serial number.")
+        progress["list_pos"] = 0
+    progress["first_hash"] = current_first
 
-    print(f"✅ Question #{question_number} sent successfully!")
+    if progress["list_pos"] >= len(QUESTIONS):
+        print("ERROR: All questions used. Add more questions to questions.py.")
+        sys.exit(1)
+
+    number = progress["next_number"]
+    question = QUESTIONS[progress["list_pos"]]
+    message = build_message(number, question)
+
+    print(f"Question #{number}:\n{message}")
+
+    if dry_run:
+        print("Dry run: nothing sent, nothing saved.")
+        return
+
+    send_to_discord(message)  # raises on failure, so progress is NOT saved
+
+    progress["next_number"] = number + 1
+    progress["list_pos"] += 1
+    progress["last_sent_date"] = today
+    save_progress(progress)
+    print(f"Question #{number} sent.")
 
 
 if __name__ == "__main__":
