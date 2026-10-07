@@ -62,14 +62,15 @@ def main():
 
     progress = load_progress()
 
-    # Scheduled runs: only after 7 PM Nepal time, and only once per day.
-    if event == "schedule":
-        if now.hour < SEND_HOUR:
-            print("Before 7 PM Nepal time. Skipping.")
-            return
-        if progress["last_sent_date"] == today:
-            print("Already sent today. Skipping.")
-            return
+    # Scheduled runs only after 7 PM Nepal time.
+    if event == "schedule" and now.hour < SEND_HOUR:
+        print("Before 7 PM Nepal time. Skipping.")
+        return
+
+    # Never post twice on the same Nepal date.
+    if progress["last_sent_date"] == today:
+        print("Already sent today. Skipping.")
+        return
 
     if not QUESTIONS:
         print("ERROR: QUESTIONS is empty.")
