@@ -12,6 +12,7 @@ from questions import QUESTIONS
 PROGRESS_FILE = "progress.json"
 NEPAL = ZoneInfo("Asia/Kathmandu")
 SEND_HOUR = 19  # 7 PM Nepal time
+MORNING_HOUR = 7  # 7 AM Nepal time
 
 
 def fingerprint(text):
@@ -24,6 +25,7 @@ def load_progress():
         "list_pos": 0,         # position inside the current QUESTIONS list
         "first_hash": "",      # identifies which list we are on
         "last_sent_date": "",  # Nepal date of the last successful post
+        "last_sent_key": "",
     }
     try:
         with open(PROGRESS_FILE, "r", encoding="utf-8") as f:
@@ -62,14 +64,19 @@ def main():
 
     progress = load_progress()
 
-    # Scheduled runs only after 7 PM Nepal time.
-    if event == "schedule" and now.hour < SEND_HOUR:
-        print("Before 7 PM Nepal time. Skipping.")
+    # Decide which slot this run belongs to (Nepal time).
+    if now.hour >= SEND_HOUR:
+        slot = "evening"
+    elif now.hour >= MORNING_HOUR:
+        slot = "morning"
+    else:
+        print("Too early. Skipping.")
         return
 
-    # Never post twice on the same Nepal date.
-    if progress["last_sent_date"] == today:
-        print("Already sent today. Skipping.")
+    # Never post twice in the same slot on the same day.
+    slot_key = f"{today}-{slot}"
+    if progress["last_sent_key"] == slot_key:
+        print(f"Already sent for {slot_key}. Skipping.")
         return
 
     if not QUESTIONS:
@@ -102,7 +109,7 @@ def main():
 
     progress["next_number"] = number + 1
     progress["list_pos"] += 1
-    progress["last_sent_date"] = today
+    progress["last_sent_key"] = slot_key
     save_progress(progress)
     print(f"Question #{number} sent.")
 
