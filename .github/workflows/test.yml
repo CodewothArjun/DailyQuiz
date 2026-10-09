@@ -6,6 +6,13 @@ on:
     - cron: "45 13 * * *"   # 7:30 PM backup
     - cron: "15 14 * * *"   # 8:00 PM backup
     - cron: "15 16 * * *"   # 10:00 PM backup
+    - cron: "15 1 * * *"    # 7:00 AM Nepal
+    - cron: "45 1 * * *"    # 7:30 AM backup
+    - cron: "15 13 * * *"   # 7:00 PM Nepal
+    - cron: "45 13 * * *"   # 7:30 PM backup
+    - cron: "15 14 * * *"   # 8:00 PM backup
+    - cron: "15 16 * * *"   # 10:00 PM backup
+    
   workflow_dispatch:
     inputs:
       dry_run:
