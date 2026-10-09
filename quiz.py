@@ -11,8 +11,8 @@ from questions import QUESTIONS
 
 PROGRESS_FILE = "progress.json"
 NEPAL = ZoneInfo("Asia/Kathmandu")
-SEND_HOUR = 19  # 7 PM Nepal time
-MORNING_HOUR = 7  # 7 AM Nepal time
+SEND_HOUR = 18  # 7 PM Nepal time
+MORNING_HOUR = 5  # 7 AM Nepal time
 
 
 def fingerprint(text):
